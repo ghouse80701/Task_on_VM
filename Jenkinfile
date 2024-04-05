@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Pull Code') {
+            steps {
+                // Pull the latest code from the repository
+                git 'https://github.com/ghouse80701/Devops_Task.git'
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                script {
+                    // Build the React frontend
+                    sh 'cd frontend && npm install'
+                    sh 'cd frontend && npm run build'
+                    sh 'cd frontend && npm start &'
+                }
+                // Add a sleep command to allow time for the server to start
+                sh 'sleep 30'
+            }
+        }
+
+        stage('Start Backend server') {
+           steps {
+                // Build the Node.js backend and run it in the background
+                script {
+                    sh 'cd BackEnd && npm install'
+                    sh 'cd BackEnd && npm start &'
+                }
+                // Add a sleep command to allow time for the server to start
+                sh 'sleep 30'
+            }
+        }
+
+        stage('Package Artifacts') {
+            steps {
+                // Archive frontend artifacts
+                sh 'cd frontend && tar -czf frontend-$BUILD_NUMBER.tar.gz build node_modules package.json package-lock.json public README.md src'
+
+                // Archive backend artifacts
+                sh 'cd BackEnd &&  tar -czf BackEnd-$BUILD_NUMBER.tar.gz index.js node_modules package.json package-lock.json'
+            }
+        }
+
+    }
+}
