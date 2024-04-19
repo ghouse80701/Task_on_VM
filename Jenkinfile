@@ -5,7 +5,7 @@ pipeline {
         stage('Pull Code') {
             steps {
                 // Pull the latest code from the repository
-                git 'https://github.com/ghouse80701/CI_Job.git'
+                git 'https://github.com/ghouse80701/Task_on_VM.git'
             }
         }
 
@@ -18,17 +18,51 @@ pipeline {
                 }
             }
         }
-
-
+        
         stage('Package Artifacts') {
             steps {
-                // Archive frontend artifacts
-                sh 'cd frontend && tar -czf frontend-$BUILD_NUMBER.tar.gz build node_modules package.json package-lock.json public README.md src'
-
-                // Archive backend artifacts
-                sh 'cd BackEnd &&  tar -czf BackEnd-$BUILD_NUMBER.tar.gz index.js package.json package-lock.json'
+                script {
+                    // Copy frontend artifacts
+                    sh 'mkdir -p /opt/frontend'
+                    sh 'cp -R /var/lib/jenkins/workspace/Task_on_VM/frontend/* /opt/frontend/'
+                    
+                    // Copy backend artifacts
+                    sh 'mkdir -p /opt/BackEnd'
+                    sh 'cp -R /var/lib/jenkins/workspace/Task_on_VM/BackEnd/* /opt/BackEnd/'
+                }
             }
         }
-
+        
+        stage('Delete the Server') {
+            steps {
+                script {
+                    // Try to delete the servers, and if it fails, just log the error
+                     try {
+                         sh 'cd /opt/BackEnd && pm2 delete index'
+                         sh 'cd /opt/frontend && pm2 delete static-page-server-3000'
+                        } catch (Exception e) {
+                         echo "Error deleting servers: ${e}"
+                    }
+                }
+            }
+        }
+        
+        stage('Start BackEnd Server') {
+            steps {
+                script {
+                    sh 'cd /opt/BackEnd && npm install'
+                    sh 'cd /opt/BackEnd && pm2 start index.js -f'
+                }
+            }
+        }
+        
+        stage('Start frontend Server') {
+            steps {
+                script {
+                    sh 'cd /opt/frontend && pm2 serve build 3000 -f'
+                    sh 'cd /opt/frontend && pm2 save'
+                }
+            }
+        }
     }
 }
